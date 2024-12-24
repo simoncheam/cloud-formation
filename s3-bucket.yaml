@@ -1,0 +1,10 @@
+# CloudFormation template version
+# description
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Create a S3 bucket'
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: 'simon-s3-bucket-yaml'
