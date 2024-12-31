@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'IAM CloudFormation template'
+
+Resources:
+  # IAM User Resource
+  # This creates an IAM user named 'simon-iam-user-CFN'.
+  # The user is granted the 'AdministratorAccess' managed policy, allowing full access to all AWS services.
+  MyIAMUser:
+    Type: 'AWS::IAM::User'
+    Properties:
+      UserName: 'simon-iam-user-CFN'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+
+  # IAM Group Resource
+  # This creates an IAM group named 'simon-iam-group-CFN'.
+  # Groups allow centralized management of permissions for multiple users.
+  MyIAMGroup:
+    Type: 'AWS::IAM::Group'
+    Properties:
+      GroupName: 'simon-iam-group-CFN'
+
+  # IAM Group Policy
+  # This creates a custom policy named 'simon-iam-group-policy-CFN' and attaches it to the IAM group.
+  # The policy grants full access to S3 ('s3:*') on all resources ('*').
+  MyIAMGroupPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: 'simon-iam-group-policy-CFN'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action: 's3:*'
+            Resource: '*'
+      Groups:
+        - !Ref MyIAMGroup
+
+  # IAM Role Resource
+  # This creates an IAM role named 'simon-iam-role-CFN'.
+  # Roles are assumed by trusted entities (e.g., EC2 instances) and allow temporary access to AWS resources.
+  MyIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: 'simon-iam-role-CFN'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: ['ec2.amazonaws.com']
+            Action: ['sts:AssumeRole']
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/PowerUserAccess'
+
+  # Custom IAM Policy Resource
+  # This creates a custom policy named 'CustomPolicy' and attaches it to the IAM role.
+  # The policy grants read-only access to S3 objects ('s3:GetObject') on all resources ('*').
+  MyIAMPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: 'CustomPolicy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action: 's3:GetObject'
+            Resource: '*'
+      Roles:
+        - !Ref MyIAMRole
+
+  # IAM User to Group Attachment
+  # This associates the 'simon-iam-user-CFN' user with the 'simon-iam-group-CFN' group.
+  # By attaching the user to the group, the user inherits the permissions of the group.
+  MyIAMUserToGroupAttachment:
+    Type: 'AWS::IAM::UserToGroupAddition'
+    Properties:
+      GroupName: !Ref MyIAMGroup
+      Users:
+        - !Ref MyIAMUser

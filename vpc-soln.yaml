@@ -1,13 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  CloudFormation template to create a basic VPC with public and private subnets
-  across two availability zones, including a bastion host for secure access
-  and Security Groups for traffic control.
+
+Description: 'CloudFormation for VPC'
 
 Resources:
-  #######################
-  # VPC Configuration
-  #######################
+  # My VPC
   MyVPC:
     Type: 'AWS::EC2::VPC'
     Properties:
@@ -18,11 +14,7 @@ Resources:
         - Key: Name
           Value: MyVPC
 
-  #######################
-  # Subnets
-  #######################
-  # ! 1
-  # Public subnet in AZ 1
+  # Public Subnet in AZ 1
   PublicSubnet2A:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -33,10 +25,8 @@ Resources:
       Tags:
         - Key: Name
           Value: PublicSubnet1A
-          #?  should be PublicSubnet2A, not PublicSubnet1A
 
-  # ! 2
-  # App Private subnet in AZ 1
+  # App Private Subnet in AZ 1
   AppPrivateSubnet1A:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -47,8 +37,7 @@ Resources:
         - Key: Name
           Value: AppPrivateSubnet1A
 
-  # ! 3
-  # Data Private subnet in AZ 1
+  # Data Private Subnet in AZ 1
   DataPrivateSubnet1A:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -59,9 +48,7 @@ Resources:
         - Key: Name
           Value: DataPrivateSubnet1A
 
-  # Create 3 Subnets for the 2nd availability zone
-
-  # Public subnet in AZ 2
+  # Public Subnet in AZ 2
   PublicSubnet2B:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -73,7 +60,7 @@ Resources:
         - Key: Name
           Value: PublicSubnet2B
 
-  # App Private subnet in AZ 2
+  # App Private Subnet in AZ 2
   AppPrivateSubnet2B:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -84,7 +71,7 @@ Resources:
         - Key: Name
           Value: AppPrivateSubnet2B
 
-  # Data Private subnet in AZ 2
+  # Data Private Subnet in AZ 2
   DataPrivateSubnet2B:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -95,9 +82,7 @@ Resources:
         - Key: Name
           Value: DataPrivateSubnet2B
 
-  #######################
-  # Internet Gateway
-  #######################
+  # Internet Gateway IGW
   InternetGateway:
     Type: 'AWS::EC2::InternetGateway'
     Properties:
@@ -112,9 +97,7 @@ Resources:
       VpcId: !Ref MyVPC
       InternetGatewayId: !Ref InternetGateway
 
-  #######################
-  # Route Tables
-  #######################
+  # Route Table
   PublicRouteTable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
@@ -123,6 +106,7 @@ Resources:
         - Key: Name
           Value: PublicRouteTable
 
+  # Public Route
   PublicRoute:
     Type: 'AWS::EC2::Route'
     DependsOn: AttachGateway
@@ -131,24 +115,20 @@ Resources:
       DestinationCidrBlock: '0.0.0.0/0'
       GatewayId: !Ref InternetGateway
 
-  # need to associate route table with public subnet
-
-  # public Subnet association
+  # Public Subnet Association
   PublicSubnet1ARouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       SubnetId: !Ref PublicSubnet2A
       RouteTableId: !Ref PublicRouteTable
 
-  #######################
-  # Bastion Host (Public Subnet)
-  #######################
+  # Bastion Host EC2
   BastionHost:
     Type: 'AWS::EC2::Instance'
     Properties:
-      InstanceType: 't2.micro'
+      InstanceType: t2.micro
       KeyName: bastion
-      ImageId: 'ami-01816d07b1128cd2d'
+      ImageId: ami-0c618421e207909d0
       SubnetId: !Ref PublicSubnet2A
       SecurityGroupIds:
         - !Ref BastionSG
@@ -164,25 +144,36 @@ Resources:
       VpcId: !Ref MyVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
-          CidrIp: 47.201.173.52/32
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 94.202.247.128/32
 
-  #######################
-  # Application Instances (Private Subnets)
-  #######################
+  # AppInstance1A
   AppInstance1A:
     Type: 'AWS::EC2::Instance'
     Properties:
-      InstanceType: 't2.micro'
+      InstanceType: t2.micro
       KeyName: bastion
-      ImageId: 'ami-01816d07b1128cd2d'
+      ImageId: ami-0c618421e207909d0
       SubnetId: !Ref AppPrivateSubnet1A
       SecurityGroupIds:
         - !Ref AppInstance1ASG
       Tags:
         - Key: Name
           Value: App1
+
+  # AppInstance2B
+  AppInstance2B:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0c618421e207909d0
+      SubnetId: !Ref AppPrivateSubnet2B
+      SecurityGroupIds:
+        - !Ref AppInstance2BSG
+      Tags:
+        - Key: Name
+          Value: App2
 
   # SG App 1A
   AppInstance1ASG:
@@ -196,24 +187,11 @@ Resources:
           ToPort: 22
           SourceSecurityGroupId: !Ref BastionSG
 
-  # AppInstance2B
-  AppInstance2B:
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      InstanceType: 't2.micro'
-      ImageId: 'ami-01816d07b1128cd2d'
-      SubnetId: !Ref AppPrivateSubnet2B
-      SecurityGroupIds:
-        - !Ref AppInstance2BSG # new sg needed
-      Tags:
-        - Key: Name
-          Value: App2
-
   # SG App 2B
   AppInstance2BSG:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: 'Allow ICMP ping from App1'
+      GroupDescription: 'Allow ICMP Ping from App1'
       VpcId: !Ref MyVPC
       SecurityGroupIngress:
         - IpProtocol: icmp

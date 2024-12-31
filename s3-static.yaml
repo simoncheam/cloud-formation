@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  CloudFormation template to s3 static file hosting
+
+Resources:
+  #######################
+  # S3 Bucket
+  #######################
+  MyS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: 'my-static-website-sc'
+      WebsiteConfiguration:
+        IndexDocument: 'index.html'
+      Tags:
+        - Key: Name
+          Value: MyS3Bucket
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: false
+
+  #######################
+  # S3 Bucket Policy
+  #######################
+  MyS3BucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref MyS3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: 'PublicReadGetObject'
+            Effect: 'Allow'
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub 'arn:aws:s3:::${MyS3Bucket}/*'

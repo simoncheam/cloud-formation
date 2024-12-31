@@ -1,8 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  CloudFormation template to create a basic VPC with public and private subnets
-  across two availability zones, including a bastion host for secure access
-  and Security Groups for traffic control.
+  CloudFormation template to create ASG with previously generated VPC template
 
 Resources:
   #######################
@@ -140,83 +138,75 @@ Resources:
       SubnetId: !Ref PublicSubnet2A
       RouteTableId: !Ref PublicRouteTable
 
-  #######################
-  # Bastion Host (Public Subnet)
-  #######################
-  BastionHost:
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      InstanceType: 't2.micro'
-      KeyName: bastion
-      ImageId: 'ami-01816d07b1128cd2d'
-      SubnetId: !Ref PublicSubnet2A
-      SecurityGroupIds:
-        - !Ref BastionSG
-      Tags:
-        - Key: Name
-          Value: BastionHost
-
-  # Bastion Security Group
-  BastionSG:
+  # Web Server / ALB Security Group
+  WebServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: 'Enable SSH access'
+      GroupDescription: 'Enable HTTP access via port 80'
       VpcId: !Ref MyVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
-          CidrIp: 47.201.173.52/32
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: '0.0.0.0/0'
 
-  #######################
-  # Application Instances (Private Subnets)
-  #######################
-  AppInstance1A:
-    Type: 'AWS::EC2::Instance'
+  # Launch Template
+  MyLaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
     Properties:
-      InstanceType: 't2.micro'
-      KeyName: bastion
-      ImageId: 'ami-01816d07b1128cd2d'
-      SubnetId: !Ref AppPrivateSubnet1A
-      SecurityGroupIds:
-        - !Ref AppInstance1ASG
-      Tags:
-        - Key: Name
-          Value: App1
+      LaunchTemplateName: 'MyLaunchTemplate'
+      LaunchTemplateData:
+        ImageId: 'ami-01816d07b1128cd2d'
+        InstanceType: 't2.micro'
+        SecurityGroupIds:
+          - !Ref WebServerSecurityGroup
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum install -y httpd
+            systemctl start httpd
+            systemctl enable httpd
+            echo "hello from Auto Scaling Instance Launch Template" > /var/www/html/index.html
 
-  # SG App 1A
-  AppInstance1ASG:
-    Type: 'AWS::EC2::SecurityGroup'
+  # Auto Scaling Group
+  MyAutoScalingGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
-      GroupDescription: 'Allow SSH from Bastion'
-      VpcId: !Ref MyVPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          SourceSecurityGroupId: !Ref BastionSG
+      LaunchTemplate:
+        LaunchTemplateName: 'MyLaunchTemplate'
+        Version: !GetAtt MyLaunchTemplate.LatestVersionNumber
 
-  # AppInstance2B
-  AppInstance2B:
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      InstanceType: 't2.micro'
-      ImageId: 'ami-01816d07b1128cd2d'
-      SubnetId: !Ref AppPrivateSubnet2B
-      SecurityGroupIds:
-        - !Ref AppInstance2BSG # new sg needed
-      Tags:
-        - Key: Name
-          Value: App2
+      MinSize: '1'
+      MaxSize: '3'
+      DesiredCapacity: '2'
+      VPCZoneIdentifier:
+        - !Ref PublicSubnet2A
+        - !Ref PublicSubnet2B
 
-  # SG App 2B
-  AppInstance2BSG:
-    Type: 'AWS::EC2::SecurityGroup'
+  # Alarm
+  HighCPUAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
     Properties:
-      GroupDescription: 'Allow ICMP ping from App1'
-      VpcId: !Ref MyVPC
-      SecurityGroupIngress:
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          SourceSecurityGroupId: !Ref AppInstance1ASG
+      AlarmDescription: 'Alarm if CPU exceeds 70%'
+      MetricName: 'CPUUtilization'
+      Namespace: 'AWS/EC2'
+      Statistic: 'Average'
+      Period: '300'
+      EvaluationPeriods: '1'
+      Threshold: '70'
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref MyAutoScalingGroup
+      AlarmActions:
+        - !Ref ScaleOutPolicy
+
+  # Scale Out Policy
+  ScaleOutPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AutoScalingGroupName: !Ref MyAutoScalingGroup
+      PolicyType: SimpleScaling
+      ScalingAdjustment: '1'
+      Cooldown: '300'
+      AdjustmentType: ChangeInCapacity
