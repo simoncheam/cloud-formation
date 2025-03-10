@@ -10,6 +10,8 @@ This repository contains CloudFormation templates for deploying a multi-tier web
 - **Subnets**: Divides your network into public and private sections across multiple zones for reliability
 - **Internet Gateway**: Allows resources to connect to the internet
 
+![VPC Architecture](public/images/vpc.png)
+
 ### Web Layer
 
 - **Load Balancer**: Distributes traffic to multiple servers
@@ -133,3 +135,26 @@ The template follows a consistent naming convention for subnets:
 - **DataPrivateSubnet2B**: Database tier private subnet in second AZ
 
 This naming scheme clearly indicates both the subnet's purpose and its availability zone location.
+
+## Accessing Instances
+
+The architecture follows a secure cascading access pattern:
+
+1. Copy the bastion.pem key to the Bastion host:
+
+   ```
+   scp -i bastion.pem bastion.pem ec2-user@BASTION_PUBLIC_IP:~/
+   ```
+
+2. SSH from Bastion to App1 (management server) using its private IP:
+
+   ```
+   ssh -i bastion.pem ec2-user@APP1_PRIVATE_IP
+   ```
+
+3. From App1, ping App2 (application server) to verify connectivity:
+   ```
+   ping APP2_PRIVATE_IP
+   ```
+
+This secure design isolates application servers behind multiple security layers.
