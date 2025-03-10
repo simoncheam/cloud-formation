@@ -23,7 +23,7 @@ Resources:
   #######################
   # ! 1
   # Public subnet in AZ 1
-  PublicSubnet2A:
+  PublicSubnet1A:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref MyVPC
@@ -33,7 +33,6 @@ Resources:
       Tags:
         - Key: Name
           Value: PublicSubnet1A
-          #?  should be PublicSubnet2A, not PublicSubnet1A
 
   # ! 2
   # App Private subnet in AZ 1
@@ -73,7 +72,7 @@ Resources:
         - Key: Name
           Value: PublicSubnet2B
 
-  # App Private subnet in AZ 2
+  # App Private subnet in AZ 2 ✅ OK
   AppPrivateSubnet2B:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -137,7 +136,13 @@ Resources:
   PublicSubnet1ARouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
-      SubnetId: !Ref PublicSubnet2A
+      SubnetId: !Ref PublicSubnet1A
+      RouteTableId: !Ref PublicRouteTable
+  # Associate the public route table with PublicSubnet2B for internet access
+  PublicSubnet2BRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet2B
       RouteTableId: !Ref PublicRouteTable
 
   #######################
@@ -149,7 +154,7 @@ Resources:
       InstanceType: 't2.micro'
       KeyName: bastion
       ImageId: 'ami-01816d07b1128cd2d'
-      SubnetId: !Ref PublicSubnet2A
+      SubnetId: !Ref PublicSubnet1A
       SecurityGroupIds:
         - !Ref BastionSG
       Tags:

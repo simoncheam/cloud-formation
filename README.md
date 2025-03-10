@@ -5,26 +5,32 @@ This repository contains CloudFormation templates for deploying a multi-tier web
 ## AWS Architecture Overview
 
 ### Foundation
+
 - **VPC (Virtual Private Cloud)**: A private network for your AWS resources
 - **Subnets**: Divides your network into public and private sections across multiple zones for reliability
 - **Internet Gateway**: Allows resources to connect to the internet
 
 ### Web Layer
+
 - **Load Balancer**: Distributes traffic to multiple servers
 - **Auto Scaling Group**: Automatically adds or removes servers based on demand
 - **S3 Bucket**: Stores static website files like HTML, CSS, and images
 
 ### Application Layer
+
 - **EC2 Instances**: Virtual servers that run your application code
 - **Security Groups**: Act as firewalls controlling traffic between components
 
 ### Data Layer
+
 - **RDS Database**: Managed MySQL database for storing application data
 
 ### Security
+
 - **IAM Roles**: Controls who can access what resources
 
 ## Business Value
+
 - **Scalability**: Handles varying traffic levels automatically
 - **High Availability**: Runs across multiple zones to prevent downtime
 - **Cost Efficiency**: Only pays for resources when needed
@@ -35,22 +41,21 @@ This repository contains CloudFormation templates for deploying a multi-tier web
 ### Network Infrastructure
 
 - **vpc.yaml**
+
   - Creates a VPC with CIDR 172.16.0.0/16
   - Deploys 6 subnets across 2 availability zones:
     - Public subnets for web/load balancer tier
     - App private subnets for application tier
     - Data private subnets for database tier
-  - Configures Internet Gateway and route tables
+  - Configures Internet Gateway and route tables for internet access
   - Sets up a Bastion host in public subnet for secure SSH access
-  - Deploys application instances in private subnets with security groups
-  - Note: Contains naming inconsistency between PublicSubnet2A resource and its Name tag
-
-- **vpc-soln.yaml**
-  - Alternative VPC configuration with refined networking components
+  - Deploys application instances in private subnets with appropriate security groups
+  - Associates route tables with both public subnets
 
 ### Compute Resources
 
 - **ec2.yaml**
+
   - Provisions EC2 instances with Amazon Linux AMI
   - Configures security groups for appropriate access
   - Sets up SSH key access configuration
@@ -65,6 +70,7 @@ This repository contains CloudFormation templates for deploying a multi-tier web
 ### Storage Resources
 
 - **s3-bucket.yaml**
+
   - Creates a basic S3 bucket with appropriate properties
   - Configures bucket access controls and lifecycle policies
 
@@ -95,7 +101,7 @@ Each template can be deployed independently or combined for a complete architect
 
 ```bash
 # Deploy VPC infrastructure
-aws cloudformation create-stack --stack-name network-stack --template-body file://vpc.yaml
+aws cloudformation create-stack --stack-name vpc-stack --template-body file://vpc.yaml
 
 # Deploy database
 aws cloudformation create-stack --stack-name database-stack --template-body file://rds.yaml
@@ -107,3 +113,23 @@ aws cloudformation create-stack --stack-name dynamic-site --template-body file:/
 ```
 
 The templates support both static websites hosted on S3 and dynamic applications with database backends.
+
+## Notes
+
+### Subnet Naming Convention
+
+The template follows a consistent naming convention for subnets:
+
+#### AZ 1 (First Availability Zone)
+
+- **PublicSubnet1A**: Public subnet in first AZ
+- **AppPrivateSubnet1A**: Application tier private subnet in first AZ
+- **DataPrivateSubnet1A**: Database tier private subnet in first AZ
+
+#### AZ 2 (Second Availability Zone)
+
+- **PublicSubnet2B**: Public subnet in second AZ
+- **AppPrivateSubnet2B**: Application tier private subnet in second AZ
+- **DataPrivateSubnet2B**: Database tier private subnet in second AZ
+
+This naming scheme clearly indicates both the subnet's purpose and its availability zone location.
