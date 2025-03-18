@@ -1,4 +1,9 @@
-# AWS CloudFormation Templates
+# AWS Multi-Tier Web Application Infrastructure as Code (CloudFormation)
+
+## Project Overview
+
+This project provides a comprehensive set of CloudFormation templates for deploying a secure, highly available three-tier web application architecture across multiple AWS availability zones.
+The infrastructure-as-code approach enables rapid, consistent deployment of production-ready infrastructure while reducing costs through auto-scaling, improving reliability with multi-AZ architecture, and enhancing security through defense-in-depth principles.
 
 This repository contains CloudFormation templates for deploying a multi-tier web application infrastructure on AWS.
 
