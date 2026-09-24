@@ -1,0 +1,6 @@
+# CloudFormation templates are YAML; make Linguist count them
+*.yaml linguist-detectable=true
+*.yaml linguist-language=YAML
+
+# 192-byte placeholder page, not a source language
+index.html linguist-documentation=true
