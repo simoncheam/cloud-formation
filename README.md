@@ -13,7 +13,7 @@ _Deployed `vpc.yaml` in the AWS console: 6 subnets across `us-east-1a` and `us-e
 
 - **Two-AZ network design:** `172.16.0.0/16` split into six /24 subnets, one public, one app, and one data subnet in each AZ. AZs are resolved at deploy time with `!GetAZs`, not hard-coded.
 - **Private subnet isolation:** only the two public subnets are associated with the route table that points to the internet gateway, and only they auto-assign public IPs. The app and data subnets have no internet route.
-- **Bastion access restricted to one IP:** SSH to the bastion is allowed from a single /32 address.
+- **Bastion access restricted to one IP:** SSH to the bastion is allowed only from the `MyIpCidr` parameter (your /32), supplied at deploy time.
 - **Security-group chaining:** App1 accepts SSH only from the bastion's security group. App2 accepts only ICMP (ping) from App1's security group and has no key pair. Rules reference security groups, not IP ranges.
 - **Load balancing across two AZs** (`ec2.yaml`): an ALB distributing HTTP traffic to two web servers, one per AZ, bootstrapped with Apache through UserData.
 - **Metric-driven scaling** (`asg.yaml`): a CloudWatch CPU alarm triggers a scale-out policy on an Auto Scaling group spanning two AZs.
@@ -44,7 +44,8 @@ Each template is standalone. The network templates each create their own VPC; no
 
 ```bash
 # Network with bastion and private app instances (requires an EC2 key pair named "bastion")
-aws cloudformation create-stack --stack-name vpc-stack --template-body file://vpc.yaml
+aws cloudformation create-stack --stack-name vpc-stack --template-body file://vpc.yaml \
+  --parameters ParameterKey=MyIpCidr,ParameterValue=$(curl -s https://checkip.amazonaws.com)/32
 
 # Load-balanced web servers
 aws cloudformation create-stack --stack-name web-stack --template-body file://ec2.yaml
@@ -85,7 +86,7 @@ App2 has no key pair and only accepts ping from App1, so the ping confirms the s
 - **Scale-out only:** `asg.yaml` has no scale-in policy.
 - **Database:** single-AZ, and without a DB subnet group. In a default VPC with an internet gateway, RDS defaults to publicly accessible; inbound access still depends on the default security group.
 - **No NAT gateway:** private instances can't reach the internet for updates.
-- **Bastion SSH source** is a hard-coded IP in `vpc.yaml`, and the **AMI ID** is hard-coded in three templates.
+- **AMI ID** is hard-coded in three templates.
 - **Not covered:** network ACLs, VPC flow logs, IMDSv2 enforcement, restricted egress, Parameters/Outputs, and template linting.
 - **`iam.yaml`** grants broad permissions (`AdministratorAccess`, `PowerUserAccess`, `s3:*`); it demonstrates resource types, not least privilege.
 - **Subnet names** in `ec2.yaml` and `asg.yaml` (`PublicSubnet2A`) don't follow the `vpc.yaml` convention.
